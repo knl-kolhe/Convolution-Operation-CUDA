@@ -1,9 +1,6 @@
 #include "cuda_runtime.h"
 #include <stdio.h>
-
 #include <time.h>
-
-//#define SIZE  1000
 
 using namespace std;
 
@@ -11,19 +8,15 @@ __global__ void Convolution1(int *a,int *filter,int *result,int size_a,int size_
 
 {
 
-        int i=threadIdx.x;
+        int i=blockIdx.x;
+	int j=blockIdx.y;
 
-        if(i<(size_result*size_result))
-
+        if(i<size_result||j<size_result)
         {
-
-                for(int k=0;k<size_filter;k++)
-
-                        for(int j=0;j<size_filter;j++)
-
-                                result[i] += a[k*size_a+(i%size_result)*2*size_a+j];
-
-        }
+            for(int k=0;k<size_filter;k++)
+                for(int l=0;l<size_filter;l++)
+			result[i*size_result+j] += filter[k*size_filter+l]*a[(2*i+k)*size_a+2*j+l];
+	}
 
 }
 
@@ -31,13 +24,12 @@ __global__ void Convolution1(int *a,int *filter,int *result,int size_a,int size_
 
 void Convolution2(int *a,int *filter,int *result,int size_a,int size_filter,int size_result)
 {
-        for(int i=0;i<size_result*size_result;i++)
+        for(int i=0;i<size_result;i++)
         {
-                for(int k=0;k<size_filter;k++)
-
-                        for(int j=0;j<size_filter;j++)
-
-                                result[i] += a[k*size_a+(i%size_result)*2*size_a+j];
+                for(int j=0;j<size_result;j++)
+					for(int k=0;k<size_filter;k++)
+						for(int l=0;l<size_filter;l++)
+                                result[i*size_result+j] += filter[k*size_filter+l]*a[(2*i+k)*size_a+2*j+l];
         }
 }
 
@@ -103,19 +95,17 @@ int main()
 
 
         for(int i=0;i<size_a*size_a;i++)
-
         {
-
                 a[i]=rand()%100;
-
+		//printf("Enter a[%d]",i);
+		//scanf("%d",&a[i]);
         }
 
         for(int i=0;i<size_filter*size_filter;i++)
-
         {
-
                 filter[i]=rand()%100;
-
+		//printf("Enter filter[%d]",i);
+		//scanf("%d",&filter[i]);
         }
         for(int i=0;i<size_result*size_result;i++)
 
@@ -125,11 +115,12 @@ int main()
                 result_serial[i]=0;
 
         }
-
-
+        
+        //Define a block of size_result by size_result
+	dim3 res(size_result,size_result);
         t=clock();
-
-        Convolution1<<<1,size_result*size_result>>>(a,filter,result,size_a,size_filter,size_result);
+        //Call the parallel function
+        Convolution1<<<res,1>>>(a,filter,result,size_a,size_filter,size_result);
 
         cudaDeviceSynchronize();
 
@@ -144,7 +135,7 @@ int main()
 
 
         t=clock();
-
+        //Code to perform Convolution using a serial algorithm
         Convolution2(a,filter,result_serial,size_a,size_filter,size_result);
 
         t=clock()-t;
@@ -152,6 +143,13 @@ int main()
         time_taken=((double)t)/CLOCKS_PER_SEC;
 
         printf("Time for Convolution using serial:%f \n",time_taken);
+		
+	/* Code to print Result
+	for(int i=0;i<size_result*size_result;i++)
+	{
+		printf("\nresult[%d]=%d \nresult_serial[%d]=%d",i,result[i],i,result_serial[i]);
+	}
+	*/
 
         cudaFree(a);
 
@@ -169,12 +167,13 @@ int main()
 
 
 /***********************OUTPUT*************************
-[user10@linux-teslagpu ~]$ ./a.out
 
+ On GTX 1050, i7 7700 4 core
  Enter size of array:10001
 
  Enter size of filter:3
-Size of Matrix after Convolution with stride = (2) will be: 5000 
-Time for Convolution with 25000000 threads: 0.000000 
-Time for Convolution using serial:1.990000 
+ Size of Matrix after Convolution with stride = (2) will be: 5000
+ Time for Convolution with 25000000 threads: 2.023000
+ Time for Convolution using serial:3.144000
+
 ******************************************************/
