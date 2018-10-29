@@ -12,6 +12,4 @@ Size of Matrix after Convolution with stride = (2) will be: 5000
 
 Time for Convolution with 25000000 threads: 1.995000
 
-Time for Convolution with 25000000 x 9 threads: 0.166000
-
 Time for Convolution using serial:3.111000
