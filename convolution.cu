@@ -23,6 +23,7 @@ __global__ void Convolution1(int *a,int *filter,int *result,int size_a,int size_
 }
 
 //using atomic add function
+/*
 __global__ void Convolution3(int *a,int *filter,int *result,int size_a,int size_filter,int size_result)
 {
 	int i=blockIdx.x;
@@ -35,7 +36,7 @@ __global__ void Convolution3(int *a,int *filter,int *result,int size_a,int size_
         result[i*size_result+j] = atomicAdd(&result[i*size_result+j],filter[k*size_filter+l]*a[(2*i+k)*size_a+2*j+l]);
 	}
 }
-
+*/
 //serial function
 void Convolution2(int *a,int *filter,int *result,int size_a,int size_filter,int size_result)
 {
@@ -145,8 +146,8 @@ int main()
 
         printf("Time for Convolution with %d threads: %f \n",size_result*size_result,time_taken);
 
-
-		t=clock();
+	/*
+	t=clock();
 
         Convolution3<<<res,fil>>>(a,filter,result,size_a,size_filter,size_result);
 
@@ -157,7 +158,7 @@ int main()
         time_taken=((double)t)/CLOCKS_PER_SEC;
 
         printf("Time for Convolution with %d x %d threads: %f \n",size_result*size_result,size_filter*size_filter,time_taken);
-
+	*/
 
         t=clock();
 
