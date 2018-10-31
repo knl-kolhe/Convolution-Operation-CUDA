@@ -3,9 +3,10 @@
 
 #include <time.h>
 
+//#define SIZE  1000
+
 using namespace std;
 
-//without using atomic add function
 __global__ void Convolution1(int *a,int *filter,int *result,int size_a,int size_filter,int size_result)
 
 {
@@ -22,8 +23,6 @@ __global__ void Convolution1(int *a,int *filter,int *result,int size_a,int size_
 
 }
 
-//using atomic add function
-/*
 __global__ void Convolution3(int *a,int *filter,int *result,int size_a,int size_filter,int size_result)
 {
 	int i=blockIdx.x;
@@ -33,11 +32,11 @@ __global__ void Convolution3(int *a,int *filter,int *result,int size_a,int size_
 	
     if(i<size_result||j<size_result||k<size_filter||l<size_filter)
     {
-        result[i*size_result+j] = atomicAdd(&result[i*size_result+j],filter[k*size_filter+l]*a[(2*i+k)*size_a+2*j+l]);
+        atomicAdd(&result[i*size_result+j],filter[k*size_filter+l]*a[(2*i+k)*size_a+2*j+l]);
 	}
 }
-*/
-//serial function
+
+
 void Convolution2(int *a,int *filter,int *result,int size_a,int size_filter,int size_result)
 {
         for(int i=0;i<size_result;i++)
@@ -55,7 +54,7 @@ void Convolution2(int *a,int *filter,int *result,int size_a,int size_filter,int 
 int main()
 {
 
-        int *a,*filter,*result,*result_serial;
+        int *a,*filter,*result,*result_serial,*result_optimal;
 
         int size_a,size_filter,size_result;
 
@@ -65,11 +64,11 @@ int main()
 
 
 
-        x: printf("\n Enter size of array:");
+        x: printf("\nEnter size of array:");
 
         scanf("%d",&size_a);
 
-        printf("\n Enter size of filter:");
+        printf("\nEnter size of filter:");
 
         scanf("%d",&size_filter);
 
@@ -77,7 +76,7 @@ int main()
 
         {
 
-                printf("\n Enter odd numbers for sizes.");
+                printf("\nEnter odd numbers for sizes.");
 
                 goto x;
 
@@ -86,7 +85,7 @@ int main()
         if((size_a-size_filter)<0)
 
         {
-                printf("\n Enter larger matrix size or smaller filter size.");
+                printf("\nEnter larger matrix size or smaller filter size.");
 
                 goto x;
 
@@ -103,6 +102,8 @@ int main()
         cudaMallocManaged(&filter,size_filter*size_filter*sizeof(int));
 
         cudaMallocManaged(&result,size_result*size_result*sizeof(int));
+		
+		cudaMallocManaged(&result_optimal,size_result*size_result*sizeof(int));
 
         cudaMallocManaged(&result_serial,size_result*size_result*sizeof(int));
 
@@ -129,6 +130,7 @@ int main()
 
                 result[i]=0;
                 result_serial[i]=0;
+				result_optimal[i]=0;
 
         }
 
@@ -146,10 +148,10 @@ int main()
 
         printf("Time for Convolution with %d threads: %f \n",size_result*size_result,time_taken);
 
-	/*
-	t=clock();
 
-        Convolution3<<<res,fil>>>(a,filter,result,size_a,size_filter,size_result);
+		t=clock();
+
+        Convolution3<<<res,fil>>>(a,filter,result_optimal,size_a,size_filter,size_result);
 
         cudaDeviceSynchronize();
 
@@ -158,7 +160,7 @@ int main()
         time_taken=((double)t)/CLOCKS_PER_SEC;
 
         printf("Time for Convolution with %d x %d threads: %f \n",size_result*size_result,size_filter*size_filter,time_taken);
-	*/
+
 
         t=clock();
 
@@ -170,12 +172,19 @@ int main()
 
         printf("Time for Convolution using serial:%f \n",time_taken);
 		
-		/*
-		for(int i=0;i<size_result*size_result;i++)
-		{
-			printf("\nresult[%d]=%d \nresult_serial[%d]=%d",i,result[i],i,result_serial[i]);
-		}
-		*/
+		
+		printf("\nSanity Check:");
+		if(size_filter*size_filter>11)
+			for(int i=0;i<10;i++)
+			{
+				printf("\nresult[%d]=%d \nresult_serial[%d]=%d \nresult_optimal[%d]=%d\n",i,result[i],i,result_serial[i],i,result_optimal[i]);
+			}
+		else
+			for(int i=0;i<size_filter*size_filter;i++)
+			{
+				printf("\nresult[%d]=%d \nresult_serial[%d]=%d \nresult_optimal[%d]=%d\n",i,result[i],i,result_serial[i],i,result_optimal[i]);
+			}
+		
 
         cudaFree(a);
 
@@ -188,3 +197,65 @@ int main()
         return 0;
 
 }
+
+
+
+
+/***********************OUTPUT*************************
+[user10@linux-teslagpu ~]$ ./a.out
+
+ Enter size of array:10001
+
+ Enter size of filter:3
+Size of Matrix after Convolution with stride = (2) will be: 5000 
+Time for Convolution with 25000000 threads: 0.000000 
+Time for Convolution using serial:1.990000 
+
+On Gtx 1050:
+E:\!KUNAL\MIT\BE\HPC\MiniProject>a.exe
+Enter size of array:10001
+
+Enter size of filter:3
+Size of Matrix after Convolution with stride = (2) will be: 5000
+Time for Convolution with 25000000 threads: 2.210000
+Time for Convolution with 25000000 x 9 threads: 0.134000
+Time for Convolution using serial:3.210000
+
+Sanity Check:
+result[0]=12792
+result_serial[0]=12792
+result_optimal[0]=12792
+
+result[1]=14060
+result_serial[1]=14060
+result_optimal[1]=14060
+
+result[2]=20138
+result_serial[2]=20138
+result_optimal[2]=20138
+
+result[3]=19328
+result_serial[3]=19328
+result_optimal[3]=19328
+
+result[4]=20288
+result_serial[4]=20288
+result_optimal[4]=20288
+
+result[5]=14252
+result_serial[5]=14252
+result_optimal[5]=14252
+
+result[6]=16804
+result_serial[6]=16804
+result_optimal[6]=16804
+
+result[7]=20854
+result_serial[7]=20854
+result_optimal[7]=20854
+
+result[8]=24886
+result_serial[8]=24886
+result_optimal[8]=24886
+
+******************************************************/
