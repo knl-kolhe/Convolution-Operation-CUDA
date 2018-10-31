@@ -17,6 +17,7 @@ Time for Convolution using serial:3.104000
 Time for Convolution with 25000000 x 9 threads: 0.131000
 
 Sanity check:
+
 result[0]=12792
 result_serial[0]=12792
 resultoptimal[0]=12792
