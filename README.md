@@ -57,3 +57,7 @@ resultoptimal[8]=24886
 result[9]=21838
 result_serial[9]=21838
 resultoptimal[9]=21838
+
+
+### A small note:
+This is not the most efficient form of convolution. I have learned now (in 2019 at graduate school) that using a polynomial multiplication algorithm using Fast Fourier Transform will be much more efficient. But at the time, for the scope of this project, we just had to parallelize some operation using CUDA C.
